@@ -2,8 +2,8 @@ package runtime
 
 import (
 	"fmt"
-	"jq"
 
+	jq "github.com/savaki/jq"
 	"github.com/serverlessworkflow/sdk-go/model"
 )
 
@@ -20,7 +20,7 @@ func handleOperationState(state *model.OperationState) error {
 	return nil
 }
 
-func HandleDataBasedSwitch(state *model.DataBasedSwitchState, byte []in) error {
+func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) error {
 	for _, cond := range state.DataConditions {
 		fmt.Println(cond.GetCondition())
 		switch cond.(type) {
@@ -31,7 +31,8 @@ func HandleDataBasedSwitch(state *model.DataBasedSwitchState, byte []in) error {
 			}
 			if op.Apply(in) {
 				fmt.Println(cond.(*model.TransitionDataCondition).Transition.NextState)
-				return cond.(*model.TransitionDataCondition).Transition.NextState
+				// return cond.(*model.TransitionDataCondition).Transition.NextState
+				return nil
 			}
 			// if this condition is true
 			// HandleTransition(state, ns)
