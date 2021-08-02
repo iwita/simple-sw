@@ -1,7 +1,7 @@
 # Simple Serverless Workflow
 
 [![Golang](https://img.shields.io/badge/Made%20with-Go-73d6ec.svg)](https://golang.org/)
-[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/iwita/simple-sw/blob/master/LICENSE)
+[![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/iwita/simple-sw/blob/main/LICENSE)
 [![Open Source Love](https://badges.frapsoft.com/os/v1/open-source.png?v=103)](https://github.com/ellerbrock/open-source-badges/)
 
 
