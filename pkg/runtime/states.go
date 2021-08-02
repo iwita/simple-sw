@@ -1,9 +1,11 @@
 package runtime
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 
-	jq "github.com/savaki/jq"
+	"github.com/itchyny/gojq"
 	"github.com/serverlessworkflow/sdk-go/model"
 )
 
@@ -25,15 +27,26 @@ func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) error {
 		fmt.Println(cond.GetCondition())
 		switch cond.(type) {
 		case *model.TransitionDataCondition:
-			op, err := jq.Parse(cond.GetCondition())
-			if err != nil {
-				fmt.Printf("Error in data based switch", err)
+			var result map[string]interface{}
+			json.Unmarshal(in, &result)
+			op, _ := gojq.Parse(cond.GetCondition())
+			iter := op.Run(result)
+			v, _ := iter.Next()
+			if err, ok := v.(error); ok {
+				log.Fatalln(err)
 			}
-			if op.Apply(in) {
-				fmt.Println(cond.(*model.TransitionDataCondition).Transition.NextState)
-				// return cond.(*model.TransitionDataCondition).Transition.NextState
-				return nil
+			// fmt.Printf("%v\n", v)
+			if v.(bool) {
+				fmt.Println("GOTO", cond.(*model.TransitionDataCondition).Transition.NextState)
+
+			} else {
+				fmt.Println("Not True")
 			}
+			// test := map[string]interface{}{"foo": []interface{}{"age", 2, 3}}
+
+			// fmt.Println("Result is:", string(res))
+
+			// return cond.(*model.TransitionDataCondition).Transition.NextState
 			// if this condition is true
 			// HandleTransition(state, ns)
 			//find next state object

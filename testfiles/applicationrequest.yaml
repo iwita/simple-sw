@@ -10,9 +10,9 @@ states:
   - name: CheckApplication
     type: switch
     dataConditions:
-      - condition: "${ .applicants | .age >= 18 }"
+      - condition: ".applicant | .age >= 18"
         transition: StartApplication
-      - condition: "${ .applicants | .age < 18 }"
+      - condition: ".applicant | .age < 18"
         transition: RejectApplication
     default:
       transition: RejectApplication
@@ -27,5 +27,5 @@ states:
       - functionRef:
           refName: sendRejectionEmailFunction
           arguments:
-            applicant: "{{ $.applicant }}"
+            applicant: ".applicant"
     end: true

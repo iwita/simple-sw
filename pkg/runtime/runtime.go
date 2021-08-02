@@ -2,6 +2,8 @@ package runtime
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"github.com/serverlessworkflow/sdk-go/model"
 )
@@ -12,6 +14,13 @@ func (r *Runtime) Start() {
 
 func (r *Runtime) exec() {
 	initState := r.Workflow.States[0]
+	fmt.Println(r.InputFile)
+	if r.InputFile != "" {
+		jsonFile, _ := os.Open(r.InputFile)
+		byteValue, _ := ioutil.ReadAll(jsonFile)
+		r.lastOutput = byteValue
+	}
+
 	r.begin(initState)
 
 }
