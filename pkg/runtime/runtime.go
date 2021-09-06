@@ -14,7 +14,7 @@ func (r *Runtime) Start() {
 
 func (r *Runtime) exec() {
 	initState := r.Workflow.States[0]
-	fmt.Println(r.InputFile)
+	fmt.Println("Name of the input file is: ", r.InputFile)
 	if r.InputFile != "" {
 		jsonFile, _ := os.Open(r.InputFile)
 		byteValue, _ := ioutil.ReadAll(jsonFile)
@@ -39,49 +39,45 @@ func (r *Runtime) exec() {
 func (r *Runtime) begin(st model.State) error {
 	switch st.(type) {
 	case *model.EventState:
-		fmt.Println("event")
-		// handleEventState()
+		//fmt.Println("event")
+		handleEventState(st.(*model.EventState), r)
 	case *model.OperationState:
 		// fmt.Println("operation")
-		functionRefs, err := handleOperationState(st.(*model.OperationState))
+		err := handleOperationState(st.(*model.OperationState), r)
 		if err != nil {
 			fmt.Println("Error in Operation State")
 			return err
 		}
 		// Call the Function(s) of this state
 		// TODO: Maybe we need to assume 1 action per state
-		for _, fr := range functionRefs {
-			apiCall, _ := r.funcToEndpoint[fr]
-			fmt.Println(apiCall)
-		}
+		//for _, fr := range functionRefs {
+		//	apiCall, _ := r.funcToEndpoint[fr]
+		//	fmt.Println(apiCall)
+		//}
 
 		// Next we need to determine the next state
-		if st.GetTransition() != nil {
-			ns := r.nameToState[st.GetTransition().NextState]
-			r.begin((ns))
-		}
+		//if st.GetTransition() != nil {
+		//	ns := r.nameToState[st.GetTransition().NextState]
+		//	r.begin((ns))
+		//}
 
 	case *model.EventBasedSwitchState:
 		fmt.Println("event based switch")
 	case *model.DataBasedSwitchState:
-		fmt.Println("data based switch")
-		ns, err := HandleDataBasedSwitch(st.(*model.DataBasedSwitchState), r.lastOutput)
+		err := HandleDataBasedSwitch(st.(*model.DataBasedSwitchState), r.lastOutput, r)
 		if err != nil {
-			fmt.Println("Error here")
+			fmt.Println("Error in DataBasedSwitchState")
 		}
-		fmt.Println(ns)
-		r.begin(r.nameToState[ns])
 	case *model.ForEachState:
 		fmt.Println("foreach")
 	case *model.ParallelState:
 		fmt.Println("parallel")
 	case *model.InjectState:
-		ns, err := handleInjectState(st.(*model.InjectState))
+		err := handleInjectState(st.(*model.InjectState), r)
 		if err != nil {
 			fmt.Println("Error in Inject State")
 			return err
 		}
-		r.begin(r.nameToState[ns])
 	}
 	return nil
 }

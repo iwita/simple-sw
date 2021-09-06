@@ -1,7 +1,7 @@
 {
     "applicant": {
       "name": "John",
-      "age" :20,
+      "age" : 17,
       "address": "1234 street",
       "zip": "54321"
     }

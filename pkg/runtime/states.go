@@ -9,24 +9,39 @@ import (
 	"github.com/serverlessworkflow/sdk-go/model"
 )
 
-func handleEventState(state *model.EventState) error {
-	fmt.Println("Event:", state.GetName())
-	//TODO
-	return nil
+func handleEventState(state *model.EventState, r *Runtime) error {
+	fmt.Println("--> Event:", state.GetName())
+	if (state.GetTransition() != nil) {
+		ns := state.Transition.NextState
+	        r.begin(r.nameToState[ns])
+		return nil
+	} else {
+		fmt.Println("This is the end..")
+		return nil
+	}
 }
 
-func handleOperationState(state *model.OperationState) ([]string, error) {
-	fmt.Println("Operation:", state.GetName())
+func handleOperationState(state *model.OperationState, r *Runtime) error {
+	fmt.Println("--> Operation:", state.GetName())
 	// TODO
 	// Check for the action Mode (default: sequential)
 	switch state.ActionMode {
 	case "sequential":
-		fmt.Println("sequential")
-		return handleSequentialActions(state), nil
+		fmt.Println("Type of Operation State: sequential")
+		functionRefs := handleSequentialActions(state) //getting the funcRefs of this op.state
+		for _, fr := range functionRefs {
+                        apiCall, _ := r.funcToEndpoint[fr]
+                        fmt.Println(apiCall)
+                }
+		if state.GetTransition() != nil {
+                        ns := r.nameToState[state.GetTransition().NextState]
+                        r.begin((ns))
+                }
+		return nil
 	case "parallel":
-		fmt.Println("operation")
+		fmt.Println("Type of Operation State: parallel")
 	}
-	return nil, nil
+	return nil
 }
 
 func handleSequentialActions(st *model.OperationState) []string {
@@ -41,7 +56,8 @@ func handleSequentialActions(st *model.OperationState) []string {
 	return refs
 }
 
-func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) (string, error) {
+func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte, r *Runtime) error {
+	fmt.Println("--> DataBasedSwitch: ", state.GetName())
 	for _, cond := range state.DataConditions {
 		fmt.Println(cond.GetCondition())
 		switch cond.(type) {
@@ -56,11 +72,18 @@ func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) (string
 			}
 			// fmt.Printf("%v\n", v)
 			if v.(bool) {
+				fmt.Println("True")
 				fmt.Println("GOTO", cond.(*model.TransitionDataCondition).Transition.NextState)
-				return cond.(*model.TransitionDataCondition).Transition.NextState, nil
+				ns := cond.(*model.TransitionDataCondition).Transition.NextState
+				r.begin(r.nameToState[ns])
+				return nil
 			} else {
 				fmt.Println("Not True")
-				return cond.(*model.TransitionDataCondition).Transition.NextState, nil
+				continue;
+				//fmt.Println("GOTO", cond.(*model.TransitionDataCondition).Transition.NextState)
+				//ns := cond.(*model.TransitionDataCondition).Transition.NextState
+                                //r.begin(r.nameToState[ns])
+				return nil
 			}
 			// test := map[string]interface{}{"foo": []interface{}{"age", 2, 3}}
 
@@ -73,15 +96,16 @@ func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) (string
 			// InferType()
 		case *model.EndDataCondition:
 			fmt.Println(cond.(*model.EndDataCondition).End)
+			fmt.Println("This is the end...")
 			// this is the end, you know
 		}
 
 	}
-	return "", nil
+	return nil
 }
 
-func handleInjectState(state *model.InjectState) (string, error) {
-	fmt.Println("Inject: ", state.GetName())
+func handleInjectState(state *model.InjectState, r *Runtime) error {
+	fmt.Println("--> Inject: ", state.GetName())
 	//injectFilter := state.GetStateDataFilter()
 	injectData := state.Data
 	fmt.Println("Data of inject state: ", injectData)
@@ -89,9 +113,11 @@ func handleInjectState(state *model.InjectState) (string, error) {
 	//outFilter := strings.Split(injectFilter.Output, " ")[1]
 	//outFilter = strings.Split(outFilter, ".")[1]
 	if state.GetTransition() != nil {
-		return state.Transition.NextState, nil
+		ns  := state.Transition.NextState
+		r.begin(r.nameToState[ns])
+		return nil
 	} else {
 		fmt.Println("This is the end..")
-		return "", nil
+		return nil
 	}
 }
