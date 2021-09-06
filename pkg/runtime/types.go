@@ -42,9 +42,11 @@ func NewRuntime(sw string, options ...RuntimeOption) *Runtime {
 }
 
 type Runtime struct {
-	Workflow   *model.Workflow
-	User       string
-	Namespace  string
-	InputFile  string
-	lastOutput []byte
+	Workflow       *model.Workflow
+	User           string
+	Namespace      string
+	InputFile      string
+	lastOutput     []byte
+	nameToState    map[string]model.State
+	funcToEndpoint map[string]string
 }

@@ -15,14 +15,33 @@ func handleEventState(state *model.EventState) error {
 	return nil
 }
 
-func handleOperationState(state *model.OperationState) error {
+func handleOperationState(state *model.OperationState) ([]string, error) {
 	fmt.Println("Operation:", state.GetName())
 	// TODO
 	// Check for the action Mode (default: sequential)
-	return nil
+	switch state.ActionMode {
+	case "sequential":
+		fmt.Println("sequential")
+		return handleSequentialActions(state), nil
+	case "parallel":
+		fmt.Println("operation")
+	}
+	return nil, nil
 }
 
-func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) error {
+func handleSequentialActions(st *model.OperationState) []string {
+	var refs []string
+	for _, action := range st.Actions {
+		fName := action.FunctionRef.RefName
+		// TODO
+		// May we assume that there will be 1 action per sequential operation state?
+		fmt.Println(fName)
+		refs = append(refs, fName)
+	}
+	return refs
+}
+
+func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) (string, error) {
 	for _, cond := range state.DataConditions {
 		fmt.Println(cond.GetCondition())
 		switch cond.(type) {
@@ -38,9 +57,10 @@ func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) error {
 			// fmt.Printf("%v\n", v)
 			if v.(bool) {
 				fmt.Println("GOTO", cond.(*model.TransitionDataCondition).Transition.NextState)
-
+				return cond.(*model.TransitionDataCondition).Transition.NextState, nil
 			} else {
 				fmt.Println("Not True")
+				return cond.(*model.TransitionDataCondition).Transition.NextState, nil
 			}
 			// test := map[string]interface{}{"foo": []interface{}{"age", 2, 3}}
 
@@ -57,5 +77,5 @@ func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) error {
 		}
 
 	}
-	return nil
+	return "", nil
 }

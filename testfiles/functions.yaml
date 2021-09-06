@@ -1,0 +1,7 @@
+functions:
+- name: startApplicationFunction
+  operation: http://myorderservice.org/start
+- name: startApplicationFunction2
+  operation: http://myorderservice.org/start2
+- name: sendRejectionEmailFunction
+  operation: http://myorderservice.org/reject

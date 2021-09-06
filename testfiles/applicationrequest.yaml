@@ -4,8 +4,12 @@ name: Applicant Request Decision Workflow
 description: Determine if applicant request is valid
 start: CheckApplication
 functions:
+  - name: startApplicationFunction
+    operation: http://myorderservice.org/start
+  - name: startApplicationFunction2
+    operation: http://myorderservice.org/start2
   - name: sendRejectionEmailFunction
-    operation: http://myapis.org/applicationapi.json#emailRejection
+    operation: http://myorderservice.org/reject
 states:
   - name: CheckApplication
     type: switch
@@ -17,8 +21,21 @@ states:
     default:
       transition: RejectApplication
   - name: StartApplication
-    type: subflow
-    workflowId: startApplicationWorkflowId
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: startApplicationFunction
+          arguments:
+            applicant: ".applicant"
+    transition: 
+      nextState: startApplication2
+  - name: startApplication2
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: startApplicationFunction2
     end: true
   - name: RejectApplication
     type: operation
