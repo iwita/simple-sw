@@ -75,6 +75,13 @@ func (r *Runtime) begin(st model.State) error {
 		fmt.Println("foreach")
 	case *model.ParallelState:
 		fmt.Println("parallel")
+	case *model.InjectState:
+		ns, err := handleInjectState(st.(*model.InjectState))
+		if err != nil {
+			fmt.Println("Error in Inject State")
+			return err
+		}
+		r.begin(r.nameToState[ns])
 	}
 	return nil
 }

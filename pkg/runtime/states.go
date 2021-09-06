@@ -79,3 +79,19 @@ func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte) (string
 	}
 	return "", nil
 }
+
+func handleInjectState(state *model.InjectState) (string, error) {
+	fmt.Println("Inject: ", state.GetName())
+	//injectFilter := state.GetStateDataFilter()
+	injectData := state.Data
+	fmt.Println("Data of inject state: ", injectData)
+	//fmt.Println("Input filter: ", injectFilter.Input, " Output filter: ", injectFilter.Output)
+	//outFilter := strings.Split(injectFilter.Output, " ")[1]
+	//outFilter = strings.Split(outFilter, ".")[1]
+	if state.GetTransition() != nil {
+		return state.Transition.NextState, nil
+	} else {
+		fmt.Println("This is the end..")
+		return "", nil
+	}
+}
