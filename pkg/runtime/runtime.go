@@ -13,26 +13,29 @@ func (r *Runtime) Start() {
 }
 
 func (r *Runtime) exec() {
-	initState := r.Workflow.States[0]
-	fmt.Println("Name of the input file is: ", r.InputFile)
-	if r.InputFile != "" {
-		jsonFile, _ := os.Open(r.InputFile)
-		byteValue, _ := ioutil.ReadAll(jsonFile)
-		r.lastOutput = byteValue
-	}
+        //initState := r.Workflow.States[0]
+        //maybe States[0] is not the starting State..
+        initStateName := r.Workflow.Start.StateName
+        fmt.Println("Name of the input file is: ", r.InputFile)
+        if r.InputFile != "" {
+                jsonFile, _ := os.Open(r.InputFile)
+                byteValue, _ := ioutil.ReadAll(jsonFile)
+                r.lastOutput = byteValue
+        }
 
-	// Store function in a hasmap, to obtain the API endpoint
-	r.funcToEndpoint = make(map[string]string, len(r.Workflow.Functions))
-	for _, f := range r.Workflow.Functions {
-		r.funcToEndpoint[f.Name] = f.Operation
-	}
+        // Store function in a hasmap, to obtain the API endpoint
+        r.funcToEndpoint = make(map[string]string, len(r.Workflow.Functions))
+        for _, f := range r.Workflow.Functions {
+                r.funcToEndpoint[f.Name] = f.Operation
+        }
 
-	r.nameToState = make(map[string]model.State, len(r.Workflow.States))
-	for _, s := range r.Workflow.States {
-		r.nameToState[s.GetName()] = s
-	}
+        r.nameToState = make(map[string]model.State, len(r.Workflow.States))
+        for _, s := range r.Workflow.States {
+                r.nameToState[s.GetName()] = s
+        }
 
-	r.begin(initState)
+        initState := r.nameToState[initStateName]
+        r.begin(initState)
 
 }
 
