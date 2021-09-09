@@ -11,9 +11,9 @@ import (
 
 func handleEventState(state *model.EventState, r *Runtime) error {
 	fmt.Println("--> Event:", state.GetName())
-	if (state.GetTransition() != nil) {
+	if state.GetTransition() != nil {
 		ns := state.Transition.NextState
-	        r.begin(r.nameToState[ns])
+		r.begin(r.nameToState[ns])
 		return nil
 	} else {
 		fmt.Println("This is the end..")
@@ -30,13 +30,14 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		fmt.Println("Type of Operation State: sequential")
 		functionRefs := handleSequentialActions(state) //getting the funcRefs of this op.state
 		for _, fr := range functionRefs {
-                        apiCall, _ := r.funcToEndpoint[fr]
-                        fmt.Println(apiCall)
-                }
+			apiCall, _ := r.funcToEndpoint[fr]
+			fmt.Println(apiCall)
+			// Make the API Call
+		}
 		if state.GetTransition() != nil {
-                        ns := r.nameToState[state.GetTransition().NextState]
-                        r.begin((ns))
-                }
+			ns := r.nameToState[state.GetTransition().NextState]
+			r.begin((ns))
+		}
 		return nil
 	case "parallel":
 		fmt.Println("Type of Operation State: parallel")
@@ -79,10 +80,10 @@ func HandleDataBasedSwitch(state *model.DataBasedSwitchState, in []byte, r *Runt
 				return nil
 			} else {
 				fmt.Println("Not True")
-				continue;
+				continue
 				//fmt.Println("GOTO", cond.(*model.TransitionDataCondition).Transition.NextState)
 				//ns := cond.(*model.TransitionDataCondition).Transition.NextState
-                                //r.begin(r.nameToState[ns])
+				//r.begin(r.nameToState[ns])
 				return nil
 			}
 			// test := map[string]interface{}{"foo": []interface{}{"age", 2, 3}}
@@ -113,7 +114,7 @@ func handleInjectState(state *model.InjectState, r *Runtime) error {
 	//outFilter := strings.Split(injectFilter.Output, " ")[1]
 	//outFilter = strings.Split(outFilter, ".")[1]
 	if state.GetTransition() != nil {
-		ns  := state.Transition.NextState
+		ns := state.Transition.NextState
 		r.begin(r.nameToState[ns])
 		return nil
 	} else {
