@@ -67,7 +67,7 @@ func (r *Runtime) begin(st model.State) error {
 	case *model.EventBasedSwitchState:
 		fmt.Println("event based switch")
 	case *model.DataBasedSwitchState:
-		err := HandleDataBasedSwitch(st.(*model.DataBasedSwitchState), r.lastOutput, r)
+		err := handleDataBasedSwitch(st.(*model.DataBasedSwitchState), r)
 		if err != nil {
 			fmt.Println("Error in DataBasedSwitchState")
 		}

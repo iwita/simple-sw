@@ -27,9 +27,9 @@ states:
       - functionRef:
           refName: startApplicationFunction
           arguments:
-            applicant: ".applicant"
+            Name: ".applicant"
     transition: 
-      nextState: startApplication2
+      nextState: RejectApplication
   - name: startApplication2
     type: operation
     actionMode: sequential

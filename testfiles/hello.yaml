@@ -1,0 +1,34 @@
+id: hello_id
+version: '1.0'
+name: Hello Workflow
+description: Send greeting with Name and Age
+start: StartApplication
+functions:
+  - name: startApplicationFunction
+    operation: https://192.168.1.204:31001/api/v1/namespaces/_/actions/hello?blocking=true&result=true
+  - name: endApplicationFunction
+    operation: http://myorderservice.org/reject
+states:
+  - name: StartApplication
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: startApplicationFunction
+          arguments:
+            name: "applicant.name"
+            age: "applicant.age"
+    transition:
+      nextState: EndApplication
+  - name: startApplication2
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: startApplicationFunction2
+    end: true
+  - name: EndApplication
+    type: inject
+    data:
+    end: true
+
