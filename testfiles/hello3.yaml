@@ -1,19 +1,19 @@
-id: hello2
+id: hello3
 version: '1.0'
-name: Hello Workflow Two
-description: Send Greeting with Name and Age + handle Greeting
+name: Hello Workflow Three
+description: Send Greeting with Name and Age + Send name in parallel
 start: StartApplication
 functions:
   - name: startApplicationFunction
     operation: https://192.168.1.204:31001/api/v1/namespaces/_/actions/hello?blocking=true&result=true
   - name: startApplicationFunction2
-    operation: https://192.168.1.204:31001/api/v1/namespaces/_/actions/hello2?blocking=true&result=true
-  - name: startApplicationFunction3
     operation: https://192.168.1.204:31001/api/v1/namespaces/_/actions/name?blocking=true&result=true
+  - name: startApplicationFunction3
+    operation: https://192.168.1.204:31001/api/v1/namespaces/_/actions/hello2?blocking=true&result=true
 states:
   - name: StartApplication
     type: operation
-    actionMode: sequential
+    actionMode: parallel
     actions:
       - functionRef:
           refName: startApplicationFunction
@@ -23,20 +23,20 @@ states:
       - functionRef:
           refName: startApplicationFunction2
           arguments:
-            payload: ".payload"
-    transition:
-      nextState: StartApplication3
-  - name: StartApplication3
-    type: operation
-    actionMode: sequential
-    actions:
-      - functionRef: 
+            name: ".applicant.name"
+      - functionRef:
           refName: startApplicationFunction3
           arguments:
-            name: ".applicant.zip"
+            payload: ".applicant.address"
+      - functionRef:
+          refName: startApplicationFunction
+          arguments:
+            name: "applicant.name"
+            age: "applicant.age"
     transition:
       nextState: EndApplication
   - name: EndApplication
     type: inject
     data: 
     end: true
+
