@@ -16,8 +16,8 @@ states:
       - functionRef:
           refName: startApplicationFunction
           arguments:
-            name: "applicant.name"
-            age: "applicant.age"
+            name: ".applicant.name"
+            age: ".applicant.age"
     transition:
       nextState: EndApplication
   - name: startApplication2

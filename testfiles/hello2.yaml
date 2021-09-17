@@ -18,8 +18,8 @@ states:
       - functionRef:
           refName: startApplicationFunction
           arguments: 
-            name: "applicant.name"
-            age: "applicant.age"
+            name: ".applicant.name"
+            age: ".applicant.age"
       - functionRef:
           refName: startApplicationFunction2
           arguments:

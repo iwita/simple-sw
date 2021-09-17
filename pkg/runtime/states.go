@@ -44,11 +44,11 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		fmt.Println("Type of Operation State: sequential")
 
 		dataState := r.lastOutput //assuming for any operation state: first action gets input from inputFile.json
-		for _, fr := range functionRefs {
+		for i, fr := range functionRefs {
 			apiCall, _ := r.funcToEndpoint[fr]
-			fmt.Println("making this apiCall: ", apiCall)
+			//fmt.Println("making this apiCall: ", apiCall)
 
-			bodyText, err := functionInvoker(apiCall, dataState, state, client, 0)
+			bodyText, err := functionInvoker(apiCall, dataState, state, client, i)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -129,30 +129,29 @@ func handleSequentialActions(st *model.OperationState) []string {
 
 func functionInvoker(apiCall string, dataState []uint8, state *model.OperationState, client *http.Client, i int) ([]uint8, error) {
 	var data map[string]interface{} //data = input file
+	data2 := make(map[string]interface{})
 	json.Unmarshal(dataState, &data)
 
-	//fmt.Println("state.Actions = ", state.Actions, i)
 	var parsings []string //finding arguments of func
 	args := state.Actions[i].FunctionRef.Arguments
 
 	for _, value := range args {
 		parsings = append(parsings, value.(string))
 	}
-	finalParsings := strings.Join(parsings, ", .")
-	if (len(parsings) > 1) {
-		finalParsings = "." + finalParsings
-	}
+	finalParsings := strings.Join(parsings, ", ")
 
-	op, _ := gojq.Parse(finalParsings)
-	iter := op.Run(data) //filtering the data for the function invocation
+	query, _ := gojq.Parse(finalParsings)
+
+	iter := query.Run(data) //filtering the data for the function invocation
+
 
 	//iterating through args to fill the POST request data
 	for key, _ := range args {
 		val, _ := iter.Next()
-		data[key] = val
+		data2[key] = val
 	}
 
-	jsonData, _ := json.Marshal(data)
+	jsonData, _ := json.Marshal(data2)
 	req, err := http.NewRequest("POST", apiCall, bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
