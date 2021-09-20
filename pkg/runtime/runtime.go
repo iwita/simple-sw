@@ -16,6 +16,7 @@ func (r *Runtime) exec() {
         //initState := r.Workflow.States[0]
         //maybe States[0] is not the starting State..
         initStateName := r.Workflow.Start.StateName
+	fmt.Println("Deploying workflow: ", r.Workflow.Name)
         fmt.Println("Name of the input file is: ", r.InputFile)
         if r.InputFile != "" {
                 jsonFile, _ := os.Open(r.InputFile)

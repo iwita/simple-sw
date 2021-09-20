@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"sync"
+	//"runtime"
 	//"time"
 
 	"github.com/itchyny/gojq"
@@ -37,7 +38,6 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
-	// TODO
 	// Check for the action Mode (default: sequential)
 	switch state.ActionMode {
 	case "sequential": //assuming 1 operation state => multiple dependable actions or just one independent
@@ -69,38 +69,43 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		fmt.Println("Type of Operation State: parallel")
 		fmt.Println("Numbers of parallel actions here: ", parallelization)
 		dataState := r.lastOutput
-		channel := make(chan string)
+		channel := make(chan string) //channel for funcRefs
+		channel2 := make(chan int) //channel for numerating the funcRefs
 
+		//runtime.GOMAXPROCS(6)
+		//runtime.Gosched()
 		var wg sync.WaitGroup
-		counter := 0
 		wg.Add(parallelization)
 
 		for ii := 0; ii < parallelization; ii++ {
-			go func(channel chan string, thisCounter int) {
+			go func(channel chan string, channel2 chan int) {
 				for {
 					fr, more := <-channel
+					num, _ := <-channel2
 					if more == false {
 						wg.Done()
 						return
 					}
 
 					apiCall, _ := r.funcToEndpoint[fr]
-					bodyText, err := functionInvoker(apiCall, dataState, state, client, thisCounter)
+					bodyText, err := functionInvoker(apiCall, dataState, state, client, num)
 
 					if err != nil {
 						log.Printf("nop")
 					}
 					fmt.Printf("%s\n", bodyText)
+					//time.Sleep(100 * time.Millisecond)
 				}
-			}(channel, counter)
-			counter++
-			//time.Sleep(100 * time.Millisecond)
+			}(channel, channel2)
 		}
-		//time.Sleep(5 * time.Second)
-		for _, fr := range functionRefs {
+
+		for num, fr := range functionRefs {
 			channel <- fr
+			channel2 <- num
 		}
+
 		close(channel)
+		close(channel2)
 		wg.Wait()
 
 		if state.GetTransition() != nil {
@@ -131,7 +136,6 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 	var data map[string]interface{} //data = input file
 	data2 := make(map[string]interface{})
 	json.Unmarshal(dataState, &data)
-
 	var parsings []string //finding arguments of func
 	args := state.Actions[i].FunctionRef.Arguments
 
@@ -143,7 +147,6 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 	query, _ := gojq.Parse(finalParsings)
 
 	iter := query.Run(data) //filtering the data for the function invocation
-
 
 	//iterating through args to fill the POST request data
 	for key, _ := range args {

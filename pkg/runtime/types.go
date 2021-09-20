@@ -34,7 +34,6 @@ func NewRuntime(sw string, options ...RuntimeOption) *Runtime {
 	wf, _ := ParseWorkflow(sw)
 
 	run := &Runtime{Workflow: wf, User: "def", Namespace: "def"}
-
 	for _, o := range options {
 		o(run)
 	}
