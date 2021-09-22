@@ -52,19 +52,6 @@ func (r *Runtime) begin(st model.State) error {
 			fmt.Println("Error in Operation State")
 			return err
 		}
-		// Call the Function(s) of this state
-		// TODO: Maybe we need to assume 1 action per state
-		//for _, fr := range functionRefs {
-		//	apiCall, _ := r.funcToEndpoint[fr]
-		//	fmt.Println(apiCall)
-		//}
-
-		// Next we need to determine the next state
-		//if st.GetTransition() != nil {
-		//	ns := r.nameToState[st.GetTransition().NextState]
-		//	r.begin((ns))
-		//}
-
 	case *model.EventBasedSwitchState:
 		fmt.Println("event based switch")
 	case *model.DataBasedSwitchState:
@@ -73,7 +60,12 @@ func (r *Runtime) begin(st model.State) error {
 			fmt.Println("Error in DataBasedSwitchState")
 		}
 	case *model.ForEachState:
-		fmt.Println("foreach")
+		//fmt.Println("foreach")
+		err := handleForEachState(st.(*model.ForEachState), r)
+		if err != nil {
+			fmt.Println("Error in ForEach State")
+			return err
+		}
 	case *model.ParallelState:
 		fmt.Println("parallel")
 	case *model.InjectState:

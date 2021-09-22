@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"sync"
+	//"os/exec"
 	//"runtime"
 	//"time"
 
@@ -19,6 +20,12 @@ import (
 
 func handleEventState(state *model.EventState, r *Runtime) error {
 	fmt.Println("--> Event:", state.GetName())
+	switch state.Exclusive {
+	case false:
+		fmt.Println("exclusive: False")
+	default:
+		fmt.Println("exclusive: True")
+	}
 	if state.GetTransition() != nil {
 		ns := state.Transition.NextState
 		r.begin(r.nameToState[ns])
@@ -70,7 +77,7 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		fmt.Println("Numbers of parallel actions here: ", parallelization)
 		dataState := r.lastOutput
 		channel := make(chan string) //channel for funcRefs
-		channel2 := make(chan int) //channel for numerating the funcRefs
+		channel2 := make(chan int) //channel for enumerating the funcRefs
 
 		//runtime.GOMAXPROCS(6)
 		//runtime.Gosched()
@@ -133,6 +140,7 @@ func handleSequentialActions(st *model.OperationState) []string {
 }
 
 func functionInvoker(apiCall string, dataState []uint8, state *model.OperationState, client *http.Client, i int) ([]uint8, error) {
+	//for OperationState arguments have to be in form: ".field1.field2.."
 	var data map[string]interface{} //data = input file
 	data2 := make(map[string]interface{})
 	json.Unmarshal(dataState, &data)
@@ -162,7 +170,14 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 		log.Fatal(err)
 	}
 
+/*	AUTH_KEY, err := exec.Command("wsk", "property", "get", "--auth").Output()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	fmt.Println("out = ", string(AUTH_KEY[12:48]), string(AUTH_KEY[49:]))
+*/
 	req.SetBasicAuth("23bc46b1-71f6-4ed5-8c54-816aa4f8c502", "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
+
 	resp, err := client.Do(req)
 
 	if err != nil {
@@ -187,6 +202,7 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 			op, _ := gojq.Parse(cond.GetCondition())
 			iter := op.Run(result)
 			v, _ := iter.Next()
+			fmt.Println("result = ", result)
 			if err, ok := v.(error); ok {
 				log.Fatalln(err)
 			}
@@ -219,6 +235,189 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 	}
 	return nil
 }
+
+func handleForEachState(state *model.ForEachState, r *Runtime) error {
+	fmt.Println("--> ForEach: ", state.GetName())
+
+	functionRefs := handleForEachActions(state)
+
+	var data map[string]interface{}
+	json.Unmarshal(r.lastOutput, &data)
+
+	//getting the filtered Data based on InputCollection filters
+	in := strings.Split(state.InputCollection, "${ [")[1]
+	in = strings.Split(in, "] }")[0]
+
+	query, _ := gojq.Parse(in)
+	iter := query.Run(data)
+
+	val, ok := iter.Next()
+	var inputCollection []interface{}
+	for (ok != false){
+		inputCollection = append(inputCollection, val)
+		val, ok = iter.Next()
+	}
+
+	jsonData, _ := json.Marshal(inputCollection)
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	parallelization := len(jsonData) //all elements of inputCollection array need to be executed in parallel
+	channel, channel2 := make(chan int), make(chan string)
+
+	var wg sync.WaitGroup
+	wg.Add(parallelization)
+	outputCollection := make(map[string][]string)
+
+	//for every apiCall: execute in parallel for all elements in InputCollection
+	for ii := 0; ii < parallelization; ii++ {
+		go func(channel chan int, channel2 chan string) {
+			for {
+				fr, more2 := <-channel2
+				num, _ := <-channel
+				if more2 == false {
+					wg.Done()
+					return
+				}
+
+				apiCall, _ := r.funcToEndpoint[fr]
+				results, err := functionInvoker2(apiCall, inputCollection, client, state, num)
+				if err != nil {
+					log.Fatal(err)
+				}
+				//fmt.Println("for apiCall: ", apiCall)
+				var array []string
+				for _, result := range results {
+					array = append(array, string(result))
+					//fmt.Println(string(result))
+				}
+				outputCollection[apiCall + string(num)] = array
+			}
+		}(channel, channel2)
+	}
+
+	//sending to the channel all apiCalls that need to be executed
+	for num, fr := range functionRefs {
+		channel2 <- fr
+		channel <- num
+	}
+	close(channel)
+	close(channel2)
+	wg.Wait()
+
+	//printing the concentrated results
+	for key, values := range outputCollection {
+		fmt.Println("apiCall: ", key)
+		for _, value := range values {
+			fmt.Println(value)
+		}
+	}
+
+	//prepei na filtrarw to dataState vasi tou inputCollection
+	//gia kathe element pou epilgetai apo to inputCollection, px to acceptedApplicant,
+	//to opoio tha perasei stis parallel executed actions
+	//ta apotelesmata kathe parallel executed action tha apothikeutoun sto outputCollection
+
+	if state.GetTransition() != nil {
+		ns := state.Transition.NextState
+		r.begin(r.nameToState[ns])
+		return nil
+	} else {
+		fmt.Println("This is the end..")
+		return nil
+	}
+}
+
+func functionInvoker2(apiCall string, inputCollection []interface{}, client *http.Client, state *model.ForEachState, i int) ([][]byte, error) {
+
+	//for ForEachState arguments have to be in form: "${ .field1.field2.. }"
+	parallelization := len(inputCollection)
+	iterationParam := state.IterationParam
+	channel3 := make(chan interface{})
+	var results [][]byte
+
+	var wg sync.WaitGroup
+	wg.Add(parallelization)
+
+	args := state.Actions[i].FunctionRef.Arguments //find arguments of the appropriate apiCall
+	var parsings []string
+
+	//building the gojq.Parse()
+	for _, value := range args {
+		value2 := value.(string)
+		value3 := strings.Split(value2, "${ .")[1]
+		value3 = strings.Split(value3, " }")[0]
+		value3 = strings.Split(value3, iterationParam)[1]
+		parsings = append(parsings, value3)
+	}
+
+	finalParsings := strings.Join(parsings, ", ")
+	query, _ := gojq.Parse(finalParsings)
+	var input []interface{} //input = filtered data to be sent to apiCall
+
+	for _, obj := range inputCollection {
+		//fmt.Println("obj = ", obj)
+		data2 := make(map[string]interface{})
+		iter := query.Run(obj)
+		for key, _ := range args {
+			val, _ := iter.Next()
+			data2[key] = val
+		}
+		input = append(input, data2)
+	}
+
+	for ii := 0; ii < parallelization; ii++ {
+		go func(channel3 chan interface{}) {
+			for {
+				element, more := <-channel3
+				if more == false {
+					wg.Done()
+					return
+				}
+
+				jsonElement, _ := json.Marshal(element)
+				req, err := http.NewRequest("POST", apiCall, bytes.NewBuffer(jsonElement))
+				req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				req.SetBasicAuth("23bc46b1-71f6-4ed5-8c54-816aa4f8c502", "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
+				resp, err := client.Do(req) //making the API request
+
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				bodyText, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				results = append(results, bodyText) //results of one apiCall
+			}
+		}(channel3)
+	}
+	for _, element := range input {
+		channel3 <- element
+	}
+	close(channel3)
+	wg.Wait()
+	return results, nil
+}
+
+func handleForEachActions(st *model.ForEachState) []string {
+        var refs []string
+        for _, action := range st.Actions {
+                fName := action.FunctionRef.RefName
+                refs = append(refs, fName)
+        }
+        return refs
+}
+
 
 func handleInjectState(state *model.InjectState, r *Runtime) error {
 	fmt.Println("--> Inject: ", state.GetName())
