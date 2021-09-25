@@ -1,0 +1,43 @@
+id: hello2
+version: '2.0'
+name: Hello Workflow Two Version 2.0
+description: Send Greeting with Name and Age + handle Greeting
+start: StartApplication
+functions:
+  - name: startApplicationFunction
+    operation: hello
+  - name: startApplicationFunction2
+    operation: hello2
+  - name: startApplicationFunction3
+    operation: name
+states:
+  - name: StartApplication
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: startApplicationFunction
+          arguments:
+            name: ".applicant.name"
+            age: ".applicant.age"
+      - functionRef:
+          refName: startApplicationFunction2
+          arguments:
+            payload: ".payload"
+    transition:
+      nextState: StartApplication3
+  - name: StartApplication3
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: startApplicationFunction3
+          arguments:
+            name: ".applicant.zip"
+    transition:
+      nextState: EndApplication
+  - name: EndApplication
+    type: inject
+    data:
+    end: true
+

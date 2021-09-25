@@ -1,0 +1,43 @@
+id: hello3new
+version: '2.0'
+name: Hello Workflow Three Version 2.0
+description: Send Greeting with Name and Age + Send name in parallel
+start: StartApplication
+functions:
+  - name: startApplicationFunction
+    operation: hello
+  - name: startApplicationFunction2
+    operation: name
+  - name: startApplicationFunction3
+    operation: hello2
+states:
+  - name: StartApplication
+    type: operation
+    actionMode: parallel
+    actions:
+      - functionRef:
+          refName: startApplicationFunction
+          arguments:
+            name: ".applicant.name"
+            age: ".applicant.age"
+      - functionRef:
+          refName: startApplicationFunction2
+          arguments:
+            name: ".applicant.name"
+      - functionRef:
+          refName: startApplicationFunction3
+          arguments:
+            payload: ".applicant.address"
+      - functionRef:
+          refName: startApplicationFunction
+          arguments:
+            name: ".applicant.name"
+            age: ".applicant.age"
+    transition:
+      nextState: EndApplication
+  - name: EndApplication
+    type: inject
+    data:
+    end: true
+
+

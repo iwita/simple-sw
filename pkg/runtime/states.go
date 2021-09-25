@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"io/ioutil"
+	//"io/ioutil"
 	"net/http"
 	"strings"
-	"bytes"
-	"crypto/tls"
+	//"bytes"
+	//"crypto/tls"
 	"sync"
 	//"os/exec"
 	//"runtime"
 	//"time"
 
+	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/itchyny/gojq"
 	"github.com/serverlessworkflow/sdk-go/model"
 )
@@ -40,11 +41,8 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 	fmt.Println("--> Operation:", state.GetName())
 	functionRefs := handleSequentialActions(state) //getting the funcRefs of this op.state
 
-	//skipping http security protocol for openwhisk cli
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client, _ := whisk.NewClient(http.DefaultClient, nil)
+
 	// Check for the action Mode (default: sequential)
 	switch state.ActionMode {
 	case "sequential": //assuming 1 operation state => multiple dependable actions or just one independent
@@ -55,13 +53,13 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 			apiCall, _ := r.funcToEndpoint[fr]
 			//fmt.Println("making this apiCall: ", apiCall)
 
-			bodyText, err := functionInvoker(apiCall, dataState, state, client, i)
+			form, result, err := functionInvoker(apiCall, dataState, state, client, i)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			fmt.Printf("%s\n", bodyText)
-			dataState = bodyText //last action's output is current action's input
+			fmt.Printf("Result: %s\n", result)
+			dataState = form //last action's output is current action's input
 		}
 		if state.GetTransition() != nil {
 			ns := r.nameToState[state.GetTransition().NextState]
@@ -95,12 +93,12 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 					}
 
 					apiCall, _ := r.funcToEndpoint[fr]
-					bodyText, err := functionInvoker(apiCall, dataState, state, client, num)
+					_, result, err := functionInvoker(apiCall, dataState, state, client, num)
 
 					if err != nil {
 						log.Printf("nop")
 					}
-					fmt.Printf("%s\n", bodyText)
+					fmt.Printf("Result: %s\n", result)
 					//time.Sleep(100 * time.Millisecond)
 				}
 			}(channel, channel2)
@@ -139,7 +137,7 @@ func handleSequentialActions(st *model.OperationState) []string {
 	return refs
 }
 
-func functionInvoker(apiCall string, dataState []uint8, state *model.OperationState, client *http.Client, i int) ([]uint8, error) {
+func functionInvoker(apiCall string, dataState []uint8, state *model.OperationState, client *whisk.Client, i int) ([]uint8, string, error) {
 	//for OperationState arguments have to be in form: ".field1.field2.."
 	var data map[string]interface{} //data = input file
 	data2 := make(map[string]interface{})
@@ -150,6 +148,7 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 	for _, value := range args {
 		parsings = append(parsings, value.(string))
 	}
+
 	finalParsings := strings.Join(parsings, ", ")
 
 	query, _ := gojq.Parse(finalParsings)
@@ -162,33 +161,24 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 		data2[key] = val
 	}
 
-	jsonData, _ := json.Marshal(data2)
-	req, err := http.NewRequest("POST", apiCall, bytes.NewBuffer(jsonData))
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	//jsonData, _ := json.Marshal(data2)
+	//result, _, err := client.Actions.Invoke(apiCall, bytes.NewBuffer(jsonData), true, true)
+	result, _, err := client.Actions.Invoke(apiCall, data2, true, true)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-/*	AUTH_KEY, err := exec.Command("wsk", "property", "get", "--auth").Output()
-	if err != nil {
-		fmt.Printf("%s", err)
-	}
-	fmt.Println("out = ", string(AUTH_KEY[12:48]), string(AUTH_KEY[49:]))
-*/
-	req.SetBasicAuth("23bc46b1-71f6-4ed5-8c54-816aa4f8c502", "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
-
-	resp, err := client.Do(req)
-
-	if err != nil {
-		log.Fatal(err)
+	var bodyText string
+	for _, v := range result {
+		bodyText = v.(string)
 	}
 
-	bodyText, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return bodyText, err
+	form, _ := json.Marshal(result)
+	//fmt.Println("result = ", result, form)
+	//fmt.Printf("type is %T\n", form)
+
+	return form, bodyText, err
 }
 
 func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error {
@@ -202,7 +192,6 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 			op, _ := gojq.Parse(cond.GetCondition())
 			iter := op.Run(result)
 			v, _ := iter.Next()
-			fmt.Println("result = ", result)
 			if err, ok := v.(error); ok {
 				log.Fatalln(err)
 			}
@@ -239,6 +228,7 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 func handleForEachState(state *model.ForEachState, r *Runtime) error {
 	fmt.Println("--> ForEach: ", state.GetName())
 
+	client, _ := whisk.NewClient(http.DefaultClient, nil)
 	functionRefs := handleForEachActions(state)
 
 	var data map[string]interface{}
@@ -260,10 +250,7 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 
 	jsonData, _ := json.Marshal(inputCollection)
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+
 
 	parallelization := len(jsonData) //all elements of inputCollection array need to be executed in parallel
 	channel, channel2 := make(chan int), make(chan string)
@@ -273,6 +260,7 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 	outputCollection := make(map[string][]string)
 
 	//for every apiCall: execute in parallel for all elements in InputCollection
+	//assuming that not only apiCalls but also actions are executed in parallel
 	for ii := 0; ii < parallelization; ii++ {
 		go func(channel chan int, channel2 chan string) {
 			for {
@@ -331,7 +319,7 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 	}
 }
 
-func functionInvoker2(apiCall string, inputCollection []interface{}, client *http.Client, state *model.ForEachState, i int) ([][]byte, error) {
+func functionInvoker2(apiCall string, inputCollection []interface{}, client *whisk.Client, state *model.ForEachState, i int) ([][]byte, error) {
 
 	//for ForEachState arguments have to be in form: "${ .field1.field2.. }"
 	parallelization := len(inputCollection)
@@ -378,6 +366,7 @@ func functionInvoker2(apiCall string, inputCollection []interface{}, client *htt
 					return
 				}
 
+				/*
 				jsonElement, _ := json.Marshal(element)
 				req, err := http.NewRequest("POST", apiCall, bytes.NewBuffer(jsonElement))
 				req.Header.Set("Content-Type", "application/json; charset=UTF-8")
@@ -387,17 +376,23 @@ func functionInvoker2(apiCall string, inputCollection []interface{}, client *htt
 
 				req.SetBasicAuth("23bc46b1-71f6-4ed5-8c54-816aa4f8c502", "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
 				resp, err := client.Do(req) //making the API request
-
+				*/
+				result, _, err := client.Actions.Invoke(apiCall, element, true, true)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				bodyText, err := ioutil.ReadAll(resp.Body)
-				if err != nil {
-					log.Fatal(err)
+				var bodyText string
+				for _, v := range result {
+					bodyText  = v.(string)
 				}
 
-				results = append(results, bodyText) //results of one apiCall
+				/*bodyText, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					log.Fatal(err)
+				}*/
+
+				results = append(results, []byte(bodyText)) //results of one apiCall
 			}
 		}(channel3)
 	}

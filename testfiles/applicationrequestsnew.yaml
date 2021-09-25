@@ -1,0 +1,32 @@
+id: applicationRequestsNew
+name: Accept Applicants by Age New
+description: Testing the ForEach state
+version: '2.0'
+start: AcceptState
+functions:
+- name: acceptStateFunction
+  operation: hello
+- name: acceptStateFunction2
+  operation: hello2
+states:
+- name: AcceptState
+  type: foreach
+  inputCollection: "${ [.applicants[] | select(.age >= 18)] }"
+  iterationParam: acceptedApplicant
+  outputCollection: "${ .confirmationresults }"
+  actions:
+  - functionRef:
+      refName: acceptStateFunction
+      arguments:
+        name: "${ .acceptedApplicant.name }"
+        age: "${ .acceptedApplicant.age }"
+  - functionRef:
+      refName: acceptStateFunction2
+      arguments:
+        payload: "${ .acceptedApplicant.zip }"
+  - functionRef:
+      refName: acceptStateFunction2
+      arguments:
+        payload: "${ .acceptedApplicant.address }"
+  end: true
+

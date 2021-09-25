@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	r := run.NewRuntime("testfiles/hello2.yaml", run.WithInputFile("testfiles/applicant.json"))
+	r := run.NewRuntime("testfiles/hello3new.yaml", run.WithInputFile("testfiles/applicant.json"))
 	r.Start()
 }
