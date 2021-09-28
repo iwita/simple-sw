@@ -1,0 +1,46 @@
+id: workflow2
+version: '1.0'
+name: Workflow1 
+description: Workflow 1 - parallel edition
+start: FirstState
+functions:
+  - name: matrixFunction
+    operation: matrix
+  - name: factorsFunction
+    operation: factors
+  - name: helloFunction
+    operation: hello
+states:
+  - name: FirstState
+    type: switch
+    dataConditions:
+       - condition: ".applicant | .age >= 18"
+         transition: SecondState
+       - condition: ".applicant | .age < 18"
+         transition: EndState
+    default: 
+         transition: EndState
+  - name: SecondState
+    type: operation
+    actionMode: parallel
+    actions:
+       - functionRef:
+           refName: helloFunction
+           arguments:
+             age: ".applicant.age"
+             name: ".applicant.name"
+       - functionRef: 
+           refName: matrixFunction
+           arguments: 
+             num: ".applicant.num2"
+       - functionRef:
+           refName: matrixFunction
+           arguments:
+             num: ".applicant.num2"
+    transition:
+      nextState: EndState
+  - name: EndState
+    type: inject
+    data: 
+    end: true
+

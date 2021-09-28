@@ -1,0 +1,57 @@
+id: workflow1
+version: '1.0'
+name: Workflow1 
+description: Test legitimate functions such as Matrix Multiplication and factorization
+start: FirstState
+functions:
+  - name: matrixFunction
+    operation: matrix
+  - name: factorsFunction
+    operation: factors
+  - name: helloFunction
+    operation: hello
+states:
+  - name: FirstState
+    type: switch
+    dataConditions:
+       - condition: ".applicant | .age >= 18"
+         transition: SecondState
+       - condition: ".applicant | .age < 18"
+         transition: EndState
+    default: 
+         transition: EndState
+  - name: SecondState
+    type: operation
+    actionMode: sequential
+    actions:
+       - functionRef:
+           refName: helloFunction
+           arguments:
+             age: ".applicant.age"
+             name: ".applicant.name"
+    transition:
+      nextState: ThirdState
+  - name: ThirdState
+    type: operation
+    actionMode: sequential
+    actions:
+       - functionRef: 
+           refName: matrixFunction
+           arguments: 
+             num: ".applicant.num2"
+    transition:
+      nextState: FourthState
+  - name: FourthState
+    type: operation
+    actionMode: sequential
+    actions:
+       - functionRef:
+           refName: matrixFunction
+           arguments:
+             num: ".applicant.num2"
+    transition:
+      nextState: EndState
+  - name: EndState
+    type: inject
+    data: 
+    end: true

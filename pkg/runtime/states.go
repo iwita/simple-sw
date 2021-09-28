@@ -77,8 +77,6 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		channel := make(chan string) //channel for funcRefs
 		channel2 := make(chan int) //channel for enumerating the funcRefs
 
-		//runtime.GOMAXPROCS(6)
-		//runtime.Gosched()
 		var wg sync.WaitGroup
 		wg.Add(parallelization)
 
@@ -99,7 +97,6 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 						log.Printf("nop")
 					}
 					fmt.Printf("Result: %s\n", result)
-					//time.Sleep(100 * time.Millisecond)
 				}
 			}(channel, channel2)
 		}
@@ -160,6 +157,7 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 		val, _ := iter.Next()
 		data2[key] = val
 	}
+
 
 	//jsonData, _ := json.Marshal(data2)
 	//result, _, err := client.Actions.Invoke(apiCall, bytes.NewBuffer(jsonData), true, true)
