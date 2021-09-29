@@ -17,7 +17,7 @@ states:
        - condition: ".applicant | .age >= 18"
          transition: SecondState
        - condition: ".applicant | .age < 18"
-         transition: EndState
+         transition: FifthState
     default: 
          transition: EndState
   - name: SecondState
@@ -49,6 +49,27 @@ states:
            refName: matrixFunction
            arguments:
              num: ".applicant.num2"
+    transition:
+      nextState: EndState
+  - name: FifthState
+    type: operation
+    actionMode: sequential
+    actions:
+       - functionRef:
+           refName: helloFunction
+           arguments:
+             age: ".applicant.age"
+             name: ".applicant.name"
+    transition:
+      nextState: SixthState
+  - name: SixthState
+    type: operation
+    actionMode: sequential
+    actions:
+       - functionRef: 
+           refName: factorsFunction
+           arguments: 
+             num: ".applicant.num1"
     transition:
       nextState: EndState
   - name: EndState

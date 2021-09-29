@@ -17,7 +17,7 @@ states:
        - condition: ".applicant | .age >= 18"
          transition: SecondState
        - condition: ".applicant | .age < 18"
-         transition: EndState
+         transition: ThirdState
     default: 
          transition: EndState
   - name: SecondState
@@ -37,6 +37,25 @@ states:
            refName: matrixFunction
            arguments:
              num: ".applicant.num2"
+    transition:
+      nextState: EndState
+  - name: ThirdState
+    type: operation
+    actionMode: parallel
+    actions: 
+       - functionRef:
+           refName: helloFunction
+           arguments: 
+             age: ".applicant.age"
+             name: ".applicant.name"
+       - functionRef:
+           refName: factorsFunction
+           arguments:
+             num: ".applicant.num1"
+       - functionRef:
+           refName: factorsFunction
+           arguments:
+             num: ".applicant.num1"
     transition:
       nextState: EndState
   - name: EndState
