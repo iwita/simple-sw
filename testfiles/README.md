@@ -2,11 +2,11 @@
 * workflow1.yaml:
 
 
-![Screenshot from 2021-09-29 12-22-50](https://user-images.githubusercontent.com/57920951/135245891-166c9506-75cb-4bd4-8c8b-d43b440ad271.png)
+![Screenshot from 2021-09-29 16-43-36](https://user-images.githubusercontent.com/57920951/135280778-f803206c-4aeb-46cc-b122-8af92d916a5d.png)
 
 
 
 * workflow2.yaml:
 
 
-![Screenshot from 2021-09-29 12-25-20](https://user-images.githubusercontent.com/57920951/135245897-630a6a59-8597-4d5b-bc5d-c1862d8149a8.png)
+![Screenshot from 2021-09-29 16-43-55](https://user-images.githubusercontent.com/57920951/135280792-8ccc903d-da5e-4e54-880a-a0701764d8f0.png)
