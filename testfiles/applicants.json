@@ -4,25 +4,29 @@
 			"name": "John",
 			"age": 50,
 			"address": "1234 street",
-			"zip": "54321"
+			"zip": "54321",
+			"weight": 100
 		},
 		{
 			"name": "Dimitris",
 			"age": 24,
 			"address": "2345 street",
-			"zip": "65432"
+			"zip": "65432",
+			"weight": 85
 		},
 		{
 			"name": "Kate",
 			"age": 17,
 			"address": "4567 street",
-			"zip": "7654"
+			"zip": "7654",
+			"weight": 65
 		},
 		{
 			"name": "Annie",
 			"age": 30,
 			"address": "9999 street",
-			"zip": "5699"
+			"zip": "5699",
+			"weight": 68
 		}
 	]
 }

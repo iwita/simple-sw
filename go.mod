@@ -10,6 +10,7 @@ replace github.com/serverlessworkflow/sdk-go v1.0.0 => /home/dgiagos/goprojects/
 
 require (
 	github.com/apache/openwhisk-client-go v0.0.0-20210313152306-ea317ea2794c
+	github.com/go-redis/redis/v8 v8.11.3
 	github.com/itchyny/gojq v0.12.4
 	github.com/serverlessworkflow/sdk-go v1.0.0
 )

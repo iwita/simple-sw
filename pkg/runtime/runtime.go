@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"context"
 
 	"github.com/serverlessworkflow/sdk-go/model"
+	"github.com/go-redis/redis/v8"
 )
 
 func (r *Runtime) Start() {
@@ -13,6 +15,27 @@ func (r *Runtime) Start() {
 }
 
 func (r *Runtime) exec() {
+	//----------------------------------
+	//initializing redis client
+	var ctx = context.Background()
+	r.Red = redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+		Password: "", // no password set
+		DB: 0, // use default DB
+	})
+
+	//_ = r.Red.HSet(ctx, "channel", [])
+	//_ = rdb.HSet(ctx, "channel", "fruit", "strawberry")
+	//_ = rdb.HSet(ctx, "channel", "fruit", "banana")
+	//vals := rdb.HGetAll(ctx, "channel")
+	//fmt.Println(vals)
+	//for _, name := range r.Workflow.States {
+		//fmt.Println("state name: ", name.GetName())
+	//	_ = r.Red.HSet(ctx, "channel", name.GetName(), "")
+	//}
+	//fmt.Println(r.Red.HGetAll(ctx, "channel"))
+
+	// ----------------------------------
         //initState := r.Workflow.States[0]
         //maybe States[0] is not the starting State..
         initStateName := r.Workflow.Start.StateName
@@ -36,6 +59,8 @@ func (r *Runtime) exec() {
         }
 
         initState := r.nameToState[initStateName]
+	//putting input data to FirstState's channel..
+	_ = r.Red.HSet(ctx, "channel", initStateName, r.lastOutput)
         r.begin(initState)
 
 }

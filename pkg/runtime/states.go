@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"context"
 	//"io/ioutil"
 	"net/http"
 	"strings"
@@ -33,6 +34,7 @@ func handleEventState(state *model.EventState, r *Runtime) error {
 		return nil
 	} else {
 		fmt.Println("This is the end..")
+		redisEraser(r)
 		return nil
 	}
 }
@@ -115,6 +117,7 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 			r.begin(ns)
 		} else {
 			fmt.Println("This is the end..")
+			redisEraser(r)
 		}
 
 		return nil
@@ -217,6 +220,8 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 		case *model.EndDataCondition:
 			fmt.Println(cond.(*model.EndDataCondition).End)
 			fmt.Println("This is the end...")
+			redisEraser(r)
+			return nil
 		}
 
 	}
@@ -313,6 +318,7 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 		return nil
 	} else {
 		fmt.Println("This is the end..")
+		redisEraser(r)
 		return nil
 	}
 }
@@ -414,18 +420,65 @@ func handleForEachActions(st *model.ForEachState) []string {
 
 func handleInjectState(state *model.InjectState, r *Runtime) error {
 	fmt.Println("--> Inject: ", state.GetName())
-	//injectFilter := state.GetStateDataFilter()
-	injectData := state.Data
-	fmt.Println("Data of inject state: ", injectData)
-	//fmt.Println("Input filter: ", injectFilter.Input, " Output filter: ", injectFilter.Output)
-	//outFilter := strings.Split(injectFilter.Output, " ")[1]
-	//outFilter = strings.Split(outFilter, ".")[1]
+	injectFilter := state.GetStateDataFilter()
+
+	var ctx = context.Background()
+	incomingData, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
+	fmt.Println("incomingData = ", string(incomingData))
+	//fmt.Println("injectFilter: ", injectFilter)
+
+	var processingData []uint8
+	var outgoingData []uint8
+
+	if (injectFilter != nil) && (injectFilter.Input != "") {
+		processingData = stateDataFilter(injectFilter.Input, incomingData)
+	} else {
+		processingData = incomingData
+	}
+
+	// ----------------LOGIC OF STATE--------------------
+	// there is no logic in an inject state, so processingData = outgoingData
+	// ---------------/LOGIC OF STATE--------------------
+
+	if injectFilter != nil && injectFilter.Output != "" {
+		outgoingData = stateDataFilter(injectFilter.Output, processingData)
+	} else {
+		outgoingData = processingData
+	}
+
 	if state.GetTransition() != nil {
 		ns := state.Transition.NextState
+		_ = r.Red.HSet(ctx, "channel", ns, outgoingData)
 		r.begin(r.nameToState[ns])
 		return nil
 	} else {
 		fmt.Println("This is the end..")
+		redisEraser(r)
 		return nil
 	}
+}
+
+//e.g for filter: "${ {applicants: [.applicants[] | select(.age >= 18)]} }"
+//gets filter and data and produces filtered data for the state
+func stateDataFilter(filter string, incomingData []uint8) ([]uint8) {
+	var data map[string]interface{}
+	var result []uint8
+	json.Unmarshal(incomingData, &data)
+
+	filter = strings.Split(filter, "${ ")[1]
+	filter = strings.Split(filter, " }")[0]
+	query, _ := gojq.Parse(filter)
+	iter := query.Run(data)
+	val, _ := iter.Next()
+
+	result, _ = json.Marshal(val)
+	return result
+}
+
+func redisEraser(r *Runtime) {
+        var ctx = context.Background()
+        for _, state := range r.Workflow.States {
+                _ = r.Red.HDel(ctx, "channel", state.GetName())
+        }
+
 }

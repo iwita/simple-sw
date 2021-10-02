@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/serverlessworkflow/sdk-go/model"
 )
 
@@ -48,4 +49,5 @@ type Runtime struct {
 	lastOutput     []byte
 	nameToState    map[string]model.State
 	funcToEndpoint map[string]string
+	Red            *redis.Client
 }

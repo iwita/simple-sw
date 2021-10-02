@@ -1,0 +1,25 @@
+id: workflow_3
+version: '1.0'
+name: Workflow 3
+description: Inject state tester with redis data transfer
+start: FirstState
+states:
+  - name: FirstState
+    type: inject
+    data:
+    stateDataFilter:
+            input: "${ {applicants: [.applicants[] | select(.age >= 18)]} }"
+    transition:
+      nextState: SecondState
+  - name: SecondState
+    type: inject
+    data: 
+    stateDataFilter:
+            input: "${ {applicants: [.applicants[] | select(.weight > 75)]} }"
+    transition:
+      nextState: ThirdState
+  - name: ThirdState
+    type: inject
+    data:
+    end: true
+
