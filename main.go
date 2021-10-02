@@ -9,7 +9,7 @@ import (
 
 func main() {
 	start := time.Now()
-	r := run.NewRuntime("testfiles/hello3new.yaml", run.WithInputFile("testfiles/applicant.json"))
+	r := run.NewRuntime("testfiles/workflow1.yaml", run.WithInputFile("testfiles/applicant.json"))
 	r.Start()
 	elapsed := time.Since(start)
 	fmt.Printf("EXECUTION TIME: %s\n", elapsed) //calculating workflow's execution time

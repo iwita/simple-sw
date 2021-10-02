@@ -44,6 +44,7 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 	functionRefs := handleSequentialActions(state) //getting the funcRefs of this op.state
 
 	client, _ := whisk.NewClient(http.DefaultClient, nil)
+	//var ctx = context.Background()
 
 	// Check for the action Mode (default: sequential)
 	switch state.ActionMode {
@@ -51,6 +52,7 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		fmt.Println("Type of Operation State: sequential")
 
 		dataState := r.lastOutput //assuming for any operation state: first action gets input from inputFile.json
+		//dataState, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
 		for i, fr := range functionRefs {
 			apiCall, _ := r.funcToEndpoint[fr]
 			//fmt.Println("making this apiCall: ", apiCall)
@@ -65,8 +67,11 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		}
 		if state.GetTransition() != nil {
 			ns := r.nameToState[state.GetTransition().NextState]
+			//_ = r.Red.HSet(ctx, "channel", ns, dataState) //passing data to the nextState
+			//fmt.Println("help: ", string(dataState))
 			r.begin((ns))
 		} else {
+			redisEraser(r)
 			fmt.Println("This is the end..")
 		}
 		return nil
