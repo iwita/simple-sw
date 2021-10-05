@@ -1,0 +1,49 @@
+id: workflow4
+version: '1.0'
+name: Workflow4 Version 1.0
+description: Test data transfering between states with redis channels
+start: StartApplication
+functions:
+  - name: startApplicationFunction
+    operation: hello
+  - name: startApplicationFunction2
+    operation: hello2
+  - name: startApplicationFunction3
+    operation: name
+states:
+  - name: StartApplication
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: startApplicationFunction
+          arguments:
+            name: ".applicant.name"
+            age: ".applicant.age"
+    transition:
+      nextState: StartApplication2
+  - name: StartApplication2
+    type: operation
+    actionMode: sequential
+    actions: 
+      - functionRef:
+          refName: startApplicationFunction2
+          arguments:
+            payload: ".payload"
+    transition:
+      nextState: StartApplication3
+  - name: StartApplication3
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: startApplicationFunction3
+          arguments:
+            name: ".message"
+    transition:
+      nextState: EndApplication
+  - name: EndApplication
+    type: inject
+    data:
+    end: true
+

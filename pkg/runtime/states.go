@@ -20,6 +20,7 @@ import (
 	"github.com/serverlessworkflow/sdk-go/model"
 )
 
+//not ready
 func handleEventState(state *model.EventState, r *Runtime) error {
 	fmt.Println("--> Event:", state.GetName())
 	switch state.Exclusive {
@@ -44,31 +45,29 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 	functionRefs := handleSequentialActions(state) //getting the funcRefs of this op.state
 
 	client, _ := whisk.NewClient(http.DefaultClient, nil)
-	//var ctx = context.Background()
+	var ctx = context.Background()
 
 	// Check for the action Mode (default: sequential)
 	switch state.ActionMode {
 	case "sequential": //assuming 1 operation state => multiple dependable actions or just one independent
 		fmt.Println("Type of Operation State: sequential")
 
-		dataState := r.lastOutput //assuming for any operation state: first action gets input from inputFile.json
-		//dataState, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
+		//dataState := r.lastOutput //assuming for any operation state: first action gets input from inputFile.json
+		dataState, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
 		for i, fr := range functionRefs {
 			apiCall, _ := r.funcToEndpoint[fr]
-			//fmt.Println("making this apiCall: ", apiCall)
-
 			form, result, err := functionInvoker(apiCall, dataState, state, client, i)
 			if err != nil {
 				log.Fatal(err)
 			}
 
 			fmt.Printf("Result: %s\n", result)
+			//fmt.Println("form = ", string(form))
 			dataState = form //last action's output is current action's input
 		}
 		if state.GetTransition() != nil {
 			ns := r.nameToState[state.GetTransition().NextState]
-			//_ = r.Red.HSet(ctx, "channel", ns, dataState) //passing data to the nextState
-			//fmt.Println("help: ", string(dataState))
+			_ = r.Red.HSet(ctx, "channel", ns.GetName(), dataState) //passing data to the nextState
 			r.begin((ns))
 		} else {
 			redisEraser(r)
@@ -76,11 +75,14 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		}
 		return nil
 	case "parallel":
-		//TODO: parallel invoked actions need to be synchronized(?)..
+		//assuming that a parallel operation state
+		//does not produce data for nextState's input
 		parallelization := len(functionRefs)
 		fmt.Println("Type of Operation State: parallel")
 		fmt.Println("Numbers of parallel actions here: ", parallelization)
-		dataState := r.lastOutput
+		var ctx = context.Background()
+		dataState, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
+		//dataState := r.lastOutput
 		channel := make(chan string) //channel for funcRefs
 		channel2 := make(chan int) //channel for enumerating the funcRefs
 
@@ -119,6 +121,7 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 
 		if state.GetTransition() != nil {
 			ns := r.nameToState[state.GetTransition().NextState]
+			_ = r.Red.HSet(ctx, "channel", ns.GetName(), dataState) //dataState transfered without changes to nextState..
 			r.begin(ns)
 		} else {
 			fmt.Println("This is the end..")
@@ -135,7 +138,7 @@ func handleSequentialActions(st *model.OperationState) []string {
 	for _, action := range st.Actions {
 		fName := action.FunctionRef.RefName
 		// TODO
-		// May we assume that there will be 1 action per sequential operation state?
+		// May we assume that there will be 1 action per sequential operation state? For now, no.
 		//fmt.Println(fName)
 		refs = append(refs, fName)
 	}
@@ -189,12 +192,16 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 
 func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error {
 	fmt.Println("--> DataBasedSwitch: ", state.GetName())
+	var ctx = context.Background()
+
 	for _, cond := range state.DataConditions {
 		fmt.Println(cond.GetCondition())
 		switch cond.(type) {
 		case *model.TransitionDataCondition:
 			var result map[string]interface{}
-			json.Unmarshal(r.lastOutput, &result)
+			dataState, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
+			json.Unmarshal(dataState, &result)
+			//json.Unmarshal(r.lastOutput, &result)
 			op, _ := gojq.Parse(cond.GetCondition())
 			iter := op.Run(result)
 			v, _ := iter.Next()
@@ -206,6 +213,8 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 				fmt.Println("True")
 				fmt.Println("GOTO", cond.(*model.TransitionDataCondition).Transition.NextState)
 				ns := cond.(*model.TransitionDataCondition).Transition.NextState
+				//DataBasedSwitch does not produce any data, just sends the data it got
+				_ = r.Red.HSet(ctx, "channel", ns, dataState)
 				r.begin(r.nameToState[ns])
 				return nil
 			} else {
@@ -213,15 +222,6 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 				continue
 				return nil
 			}
-			// test := map[string]interface{}{"foo": []interface{}{"age", 2, 3}}
-
-			// fmt.Println("Result is:", string(res))
-
-			// return cond.(*model.TransitionDataCondition).Transition.NextState
-			// if this condition is true
-			// HandleTransition(state, ns)
-			//find next state object
-			// InferType()
 		case *model.EndDataCondition:
 			fmt.Println(cond.(*model.EndDataCondition).End)
 			fmt.Println("This is the end...")
@@ -233,6 +233,7 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 	return nil
 }
 
+//assuming ForEachState is not producing output for nextState's input
 func handleForEachState(state *model.ForEachState, r *Runtime) error {
 	fmt.Println("--> ForEach: ", state.GetName())
 
@@ -240,7 +241,10 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 	functionRefs := handleForEachActions(state)
 
 	var data map[string]interface{}
-	json.Unmarshal(r.lastOutput, &data)
+	var ctx = context.Background()
+	dataState, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
+	json.Unmarshal(dataState, &data)
+	//json.Unmarshal(r.lastOutput, &data)
 
 	//getting the filtered Data based on InputCollection filters
 	in := strings.Split(state.InputCollection, "${ [")[1]
@@ -319,6 +323,7 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 
 	if state.GetTransition() != nil {
 		ns := state.Transition.NextState
+		_ = r.Red.HSet(ctx, "channel", ns, dataState)
 		r.begin(r.nameToState[ns])
 		return nil
 	} else {
@@ -356,7 +361,6 @@ func functionInvoker2(apiCall string, inputCollection []interface{}, client *whi
 	var input []interface{} //input = filtered data to be sent to apiCall
 
 	for _, obj := range inputCollection {
-		//fmt.Println("obj = ", obj)
 		data2 := make(map[string]interface{})
 		iter := query.Run(obj)
 		for key, _ := range args {
@@ -375,17 +379,6 @@ func functionInvoker2(apiCall string, inputCollection []interface{}, client *whi
 					return
 				}
 
-				/*
-				jsonElement, _ := json.Marshal(element)
-				req, err := http.NewRequest("POST", apiCall, bytes.NewBuffer(jsonElement))
-				req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				req.SetBasicAuth("23bc46b1-71f6-4ed5-8c54-816aa4f8c502", "123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP")
-				resp, err := client.Do(req) //making the API request
-				*/
 				result, _, err := client.Actions.Invoke(apiCall, element, true, true)
 				if err != nil {
 					log.Fatal(err)
@@ -480,10 +473,10 @@ func stateDataFilter(filter string, incomingData []uint8) ([]uint8) {
 	return result
 }
 
+//function to erase Redis' cache after each workflow execution
 func redisEraser(r *Runtime) {
         var ctx = context.Background()
         for _, state := range r.Workflow.States {
                 _ = r.Red.HDel(ctx, "channel", state.GetName())
         }
-
 }

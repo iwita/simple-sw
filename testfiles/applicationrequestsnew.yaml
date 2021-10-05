@@ -28,5 +28,10 @@ states:
       refName: acceptStateFunction2
       arguments:
         payload: "${ .acceptedApplicant.address }"
+  transition:
+    nextState: FinalState
+- name: FinalState
+  type: inject
+  data: 
   end: true
 
