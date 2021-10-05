@@ -35,3 +35,9 @@ In this way, all states "know" apriori where to find their data..
  Current state's output is NOT transfered to the next state
  
  The next state gets the same data as the current state got
+
+### Inject state:
+
+ Current state's output is the next state's input, so we have to be strict with arguments' "tuning" in the workflow.yaml 
+ 
+ StateData filters also implemented here
