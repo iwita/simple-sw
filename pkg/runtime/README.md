@@ -3,7 +3,9 @@
 
 ## Things, so far, work this way:
 
-A state gets its data by reading from Redis channel the value that belongs to the key "state.GetName()"
+A state receives its data by reading from Redis channel the value that belongs to the key "state.GetName()"
+
+A states sends its data by writing to the Redis channel the value that belongs to the key "nextState.GetName()"
 
 In this way, all states "know" apriori where to find their data..
 
