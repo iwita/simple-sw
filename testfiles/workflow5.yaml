@@ -1,0 +1,35 @@
+id: workflow5
+version: '1.0'
+name: Workflow5 Version1.0 for testing image recognition
+start: FirstState
+functions:
+  - name: f23
+    operation: f23
+  - name: f4
+    operation: f4
+states:
+  - name: FirstState
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef: 
+          refName: f23
+          arguments:
+            filename: ".filename"
+    transition:
+      nextState: SecondState
+  - name: SecondState
+    type: foreach
+    inputCollection: "${ [.results[] | select(.className)] }"
+    iterationParam: description
+    outputCollection: "${ .descriptions }"
+    actions:
+    - functionRef:
+        refName: f4
+        arguments: 
+          word: "${ .description.className }"
+    end: true
+  - name: FinalState
+    type: inject
+    data: 
+    end: true

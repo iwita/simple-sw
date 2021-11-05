@@ -169,7 +169,6 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 		data2[key] = val
 	}
 
-
 	//jsonData, _ := json.Marshal(data2)
 	//result, _, err := client.Actions.Invoke(apiCall, bytes.NewBuffer(jsonData), true, true)
 	result, _, err := client.Actions.Invoke(apiCall, data2, true, true)
@@ -180,7 +179,12 @@ func functionInvoker(apiCall string, dataState []uint8, state *model.OperationSt
 
 	var bodyText string
 	for _, v := range result {
-		bodyText = v.(string)
+		switch v.(type) {
+		case string:
+			bodyText = v.(string)
+		case []interface{}:
+			bodyText = "Not shown here."
+		}
 	}
 
 	form, _ := json.Marshal(result)
@@ -252,7 +256,6 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 
 	query, _ := gojq.Parse(in)
 	iter := query.Run(data)
-
 	val, ok := iter.Next()
 	var inputCollection []interface{}
 	for (ok != false){
@@ -261,8 +264,6 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 	}
 
 	jsonData, _ := json.Marshal(inputCollection)
-
-
 
 	parallelization := len(jsonData) //all elements of inputCollection array need to be executed in parallel
 	channel, channel2 := make(chan int), make(chan string)
@@ -310,9 +311,9 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 
 	//printing the concentrated results
 	for key, values := range outputCollection {
-		fmt.Println("apiCall: ", key)
+		fmt.Println("Results below of apiCall:", key)
 		for _, value := range values {
-			fmt.Println(value)
+			fmt.Println("-", value)
 		}
 	}
 
@@ -338,6 +339,7 @@ func functionInvoker2(apiCall string, inputCollection []interface{}, client *whi
 	//for ForEachState arguments have to be in form: "${ .field1.field2.. }"
 	parallelization := len(inputCollection)
 	iterationParam := state.IterationParam
+
 	channel3 := make(chan interface{})
 	var results [][]byte
 
@@ -361,14 +363,18 @@ func functionInvoker2(apiCall string, inputCollection []interface{}, client *whi
 	var input []interface{} //input = filtered data to be sent to apiCall
 
 	for _, obj := range inputCollection {
+		//fmt.Println("obj = ", obj)
+
 		data2 := make(map[string]interface{})
 		iter := query.Run(obj)
 		for key, _ := range args {
 			val, _ := iter.Next()
+			//fmt.Println("val = ", val)
 			data2[key] = val
 		}
 		input = append(input, data2)
 	}
+	//fmt.Println("input = ", input)
 
 	for ii := 0; ii < parallelization; ii++ {
 		go func(channel3 chan interface{}) {
@@ -423,6 +429,23 @@ func handleInjectState(state *model.InjectState, r *Runtime) error {
 	var ctx = context.Background()
 	incomingData, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
 	fmt.Println("incomingData = ", string(incomingData))
+
+	//fmt.Println("incomingData = ", incomingData)
+	var data map[string]interface{}
+	json.Unmarshal(incomingData, &data)
+	data2 := data["results"]
+	var descriptions []string
+	var desc string
+	if d, ok := data2.([]interface{}); ok {
+		for key, val := range d {
+			fmt.Println(key, ":", val)
+			item := val.(map[string]interface{})
+			desc = item["className"].(string)
+			//fmt.Println("desc = ", desc)
+			descriptions = append(descriptions, desc)
+		}
+	}
+	fmt.Println("descriptions = ", descriptions) //descriptions is gonna be deleted soon, testing purposes
 	//fmt.Println("injectFilter: ", injectFilter)
 
 	var processingData []uint8

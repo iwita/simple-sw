@@ -1,0 +1,47 @@
+id: workflow6
+version: '1.0'
+name: Workflow 6 for decomposed image recognition - translation
+start: FirstState
+functions:
+  - name: f1
+    operation: f1
+  - name: f23
+    operation: f23
+  - name: f4
+    operation: f4
+states:
+  - name: FirstState
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: f1
+          arguments:
+            image: ".image.encoded"
+    transition:
+      nextState: SecondState
+  - name: SecondState
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: f23
+          arguments:
+            filename: ".filename"
+    transition:
+      nextState: ThirdState
+  - name: ThirdState
+    type: foreach
+    inputCollection: "${ [.results[] | select(.className)] }"
+    iterationParam: description
+    outputCollection: "${ .descriptions }"
+    actions:
+    - functionRef:
+        refName: f4
+        arguments:
+          word: "${ .description.className }"
+    end: true
+  - name: EndState
+    type: inject
+    data:
+    end: true

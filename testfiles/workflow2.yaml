@@ -1,6 +1,6 @@
 id: workflow2
 version: '1.0'
-name: Workflow1 
+name: Workflow2 
 description: Workflow 1 - parallel edition
 start: FirstState
 functions:
