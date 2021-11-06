@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 
+	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/go-redis/redis/v8"
 	"github.com/serverlessworkflow/sdk-go/model"
 )
@@ -50,4 +51,5 @@ type Runtime struct {
 	nameToState    map[string]model.State
 	funcToEndpoint map[string]string
 	Red            *redis.Client
+	Whisk          *whisk.Client
 }

@@ -6,7 +6,7 @@ import (
 	"log"
 	"context"
 	//"io/ioutil"
-	"net/http"
+	//"net/http"
 	"strings"
 	//"bytes"
 	//"crypto/tls"
@@ -44,7 +44,7 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 	fmt.Println("--> Operation:", state.GetName())
 	functionRefs := handleSequentialActions(state) //getting the funcRefs of this op.state
 
-	client, _ := whisk.NewClient(http.DefaultClient, nil)
+	//client, _ := whisk.NewClient(http.DefaultClient, nil)
 	var ctx = context.Background()
 
 	// Check for the action Mode (default: sequential)
@@ -56,7 +56,7 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 		dataState, _ := r.Red.HGet(ctx, "channel", state.GetName()).Bytes()
 		for i, fr := range functionRefs {
 			apiCall, _ := r.funcToEndpoint[fr]
-			form, result, err := functionInvoker(apiCall, dataState, state, client, i)
+			form, result, err := functionInvoker(apiCall, dataState, state, r.Whisk, i)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -100,7 +100,7 @@ func handleOperationState(state *model.OperationState, r *Runtime) error {
 					}
 
 					apiCall, _ := r.funcToEndpoint[fr]
-					_, result, err := functionInvoker(apiCall, dataState, state, client, num)
+					_, result, err := functionInvoker(apiCall, dataState, state, r.Whisk, num)
 
 					if err != nil {
 						log.Printf("nop")
@@ -241,7 +241,7 @@ func handleDataBasedSwitch(state *model.DataBasedSwitchState, r *Runtime) error 
 func handleForEachState(state *model.ForEachState, r *Runtime) error {
 	fmt.Println("--> ForEach: ", state.GetName())
 
-	client, _ := whisk.NewClient(http.DefaultClient, nil)
+	//client, _ := whisk.NewClient(http.DefaultClient, nil)
 	functionRefs := handleForEachActions(state)
 
 	var data map[string]interface{}
@@ -285,7 +285,7 @@ func handleForEachState(state *model.ForEachState, r *Runtime) error {
 				}
 
 				apiCall, _ := r.funcToEndpoint[fr]
-				results, err := functionInvoker2(apiCall, inputCollection, client, state, num)
+				results, err := functionInvoker2(apiCall, inputCollection, r.Whisk, state, num)
 				if err != nil {
 					log.Fatal(err)
 				}

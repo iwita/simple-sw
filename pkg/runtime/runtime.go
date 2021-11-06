@@ -5,9 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 	"context"
+	"net/http"
 
 	"github.com/serverlessworkflow/sdk-go/model"
 	"github.com/go-redis/redis/v8"
+	"github.com/apache/openwhisk-client-go/whisk"
 )
 
 func (r *Runtime) Start() {
@@ -23,6 +25,9 @@ func (r *Runtime) exec() {
 		Password: "", // no password set
 		DB: 0, // use default DB
 	})
+
+	//initializing Openwhisk client
+	r.Whisk, _ = whisk.NewClient(http.DefaultClient, nil)
 
 	//_ = r.Red.HSet(ctx, "channel", [])
 	//_ = rdb.HSet(ctx, "channel", "fruit", "strawberry")
