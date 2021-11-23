@@ -1,0 +1,59 @@
+id: workflow7
+version: '2.0'
+name: Workflow 7 for python-image-processing & tensorflow model
+start: FirstState
+functions:
+  - name: f11
+    operation: f11
+  - name: f22
+    operation: f22
+  - name: f33
+    operation: f33
+  - name: f44
+    operation: f44
+states:
+  - name: FirstState
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: f11
+          arguments:
+            input: ".file.name"
+            width: ".file.width"
+            height: ".file.height"
+    transition:
+      nextState: SecondState
+  - name: SecondState
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: f22
+          arguments:
+            key: ".key"
+    transition:
+      nextState: ThirdState
+  - name: ThirdState
+    type: operation
+    actionMode: sequential
+    actions:
+      - functionRef:
+          refName: f33
+          arguments:
+            key: ".key"
+    transition:
+      nextState: FourthState
+  - name: FourthState
+    type: operation
+    actionMode: sequential
+    actions: 
+      - functionRef:
+          refName: f44
+          arguments: 
+            filename: ".key"
+    transition: EndState
+  - name: EndState
+    type: inject
+    data:
+    end: true

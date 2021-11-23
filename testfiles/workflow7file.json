@@ -1,0 +1,9 @@
+{
+    "file": {
+        "input_bucket": "image-input",
+        "output_bucket": "image-output",
+        "name": "lewis",
+        "height": 350,
+        "width": 350
+    }
+}

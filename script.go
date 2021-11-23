@@ -17,7 +17,7 @@ func main() {
 			fmt.Printf("%s", err)
 		}
 	}
-        fmt.Println("Command Successfully Executed")
+    fmt.Println("Command Successfully Executed")
 	elapsed := time.Since(start)
 	fmt.Printf("Time: %s\n", elapsed)
 }
